@@ -137,9 +137,11 @@ module.exports = class extends Base {
   async getSearchResult(keyword) {
     const lang = this.ctx.lang.toLowerCase();
     const version = this.get('version');
-
+    if (process.platform === 'win32'&& think.isEmpty(think.config('grep'))) {
+      think.config('grep', await this.grep());
+    }
     const cmd = `${
-      process.platform === 'win32' ? await this.grep() : 'grep'
+      process.platform === 'win32' ? think.config('grep') : 'grep'
     } '${keyword}' -ri *.md`;
     const fn = think.promisify(childProcess.exec, childProcess);
     const options = {
@@ -197,7 +199,7 @@ module.exports = class extends Base {
       '"': '&quot;',
       "'": '&#39;'
     };
-    return (str + '').replace(/[<>'"]/g, function(a) {
+    return (str + '').replace(/[<>'"]/g, function (a) {
       return htmlMaps[a];
     });
   }
