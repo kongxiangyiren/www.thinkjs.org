@@ -72,7 +72,7 @@ module.exports = class extends think.Controller {
     const filePath = `${think.ROOT_PATH}/www/static/module/thinkjs/thinkjs_${lang}_${version}.md`;
     think.mkdir(path.dirname(filePath));
 
-    const jsonPath = `${think.ROOT_PATH}/view/${lang}/doc/${version}/sidebar.json`;
+    const jsonPath = `${process.cwd()}/view/${lang}/doc/${version}/sidebar.json`;
     const content = fs.readFileSync(jsonPath);
     const data = JSON.parse(content);
 
@@ -80,7 +80,7 @@ module.exports = class extends think.Controller {
     for (const type in data) {
       doc.push(`# ${type}`);
       for (const name in data[type]) {
-        const docFilePath = `${think.ROOT_PATH}/view/${lang}/doc/${version}/${data[type][name]}.md`;
+        const docFilePath = `${process.cwd()}/view/${lang}/doc/${version}/${data[type][name]}.md`;
         const content = fs.readFileSync(docFilePath, 'utf8');
         doc.push(content);
       }

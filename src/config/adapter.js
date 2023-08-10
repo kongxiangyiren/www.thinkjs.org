@@ -86,7 +86,7 @@ exports.session = {
 exports.view = {
   type: 'ejs',
   common: {
-    viewPath: path.join(think.ROOT_PATH, 'view'),
+    viewPath: path.join(process.cwd(), 'view'),
     sep: '_',
     extname: '.html'
   },

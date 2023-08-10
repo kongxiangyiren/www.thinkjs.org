@@ -38,3 +38,7 @@ config.development.js
 adapter.development.js
 
 www/static/module/thinkjs/*.md
+
+.pkg-cache/
+dist/
+view.tar.gz

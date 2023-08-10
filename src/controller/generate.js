@@ -6,7 +6,7 @@ const path = require('path');
  */
 module.exports = class extends base {
   __before() {
-    this.rootPath = think.ROOT_PATH + '/view_build';
+    this.rootPath = process.cwd() + '/view_build';
     if (!think.cli) {
       this.fail();
     }
@@ -34,7 +34,7 @@ module.exports = class extends base {
    * @return {} []
    */
   singleAction() {
-    const rootPath = think.ROOT_PATH + '/view';
+    const rootPath = process.cwd() + '/view';
     const langs = fs.readdirSync(rootPath);
     langs.forEach(lang => {
       const docPath = rootPath + '/' + lang + '/doc';

@@ -3,11 +3,12 @@
   "description": "application created by thinkjs",
   "version": "1.2.0",
   "scripts": {
+    "postinstall": "patch-package && git init && git submodule init && git submodule update",
     "start": "node development.js",
     "lint": "eslint src/",
     "lint-fix": "eslint --fix src/",
-    "now-build": "sh bin/update.sh",
-    "pkg-build": "pkg ./ --out-path=dist",
+    "pkg-build-win": "rm -rf ./dist ./view.tar.gz && cd ./view && tar zcf ../view.tar.gz * && cd .. && set PKG_CACHE_PATH=./.pkg-cache/&& pkg . --compress GZip",
+    "pkg-build": "rm -rf ./dist ./view.tar.gz && cd ./view && tar zcf ../view.tar.gz * && cd .. && export PKG_CACHE_PATH=./.pkg-cache/&& pkg . --compress GZip",
     "compile": "babel --no-babelrc src/ --presets think-node --out-dir app/"
   },
   "dependencies": {
@@ -32,22 +33,25 @@
   "devDependencies": {
     "eslint": "^4.16.0",
     "eslint-config-think": "^1.0.0",
+    "patch-package": "^8.0.0",
+    "pkg": "5.8.1",
     "think-watcher": "^3.0.0"
   },
   "repository": "",
   "license": "MIT",
   "readmeFilename": "README.md",
-  "bin": "pkg.js",
+  "bin": "pkg-build.js",
   "pkg": {
     "assets": [
       "src/**/*",
-      "view/**/*",
-      "www/**/*"
+      "www/**/*",
+      "view.tar.gz"
     ],
     "targets": [
       "node10-linux-x64",
       "node10-macos-x64",
       "node10-win-x64"
-    ]
+    ],
+    "outputPath": "dist"
   }
 }

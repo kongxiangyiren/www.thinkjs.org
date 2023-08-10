@@ -15,7 +15,7 @@ module.exports = class extends Base {
     let data = await this.cache(key);
 
     if (!data) {
-      const filePath = `${think.ROOT_PATH}/view/${lang}/doc/${version}/sidebar.json`;
+      const filePath = `${process.cwd()}/view/${lang}/doc/${version}/sidebar.json`;
       const content = fs.readFileSync(filePath);
       data = JSON.parse(content);
       this.cache(key, data);
@@ -53,7 +53,7 @@ module.exports = class extends Base {
     const version = this.get('version');
 
     let markedContent;
-    let filePath = `${think.ROOT_PATH}/view/${lang}/doc/${version}/${doc}.md`;
+    let filePath = `${process.cwd()}/view/${lang}/doc/${version}/${doc}.md`;
     const htmlPath = filePath.replace('.md', '.html');
 
     if (think.isFile(htmlPath)) {
@@ -62,7 +62,10 @@ module.exports = class extends Base {
       if (doc === 'single') {
         filePath = `${think.ROOT_PATH}/www/static/module/thinkjs/thinkjs_${lang}_${version}.md`;
         if (!think.isFile(filePath)) {
-          filePath = this.generateSingleDoc(this.ctx.lang.toLowerCase(), this.get('version'));
+          filePath = this.generateSingleDoc(
+            this.ctx.lang.toLowerCase(),
+            this.get('version')
+          );
         }
       }
       if (!think.isFile(filePath)) {
@@ -72,12 +75,21 @@ module.exports = class extends Base {
     }
 
     if (doc === 'single') {
-      this.assign('title', `${this.getI18n()('all-doc')}${this.getI18n()('title-doc-suffix', version)}`);
+      this.assign(
+        'title',
+        `${this.getI18n()('all-doc')}${this.getI18n()(
+          'title-doc-suffix',
+          version
+        )}`
+      );
     } else {
       const titleReg = /<h2(?:[^<>]*)>([^<>]+)<\/h2>/;
       const match = markedContent.match(titleReg);
       if (match) {
-        this.assign('title', `${match[1]}${this.getI18n()('title-doc-suffix', version)}`);
+        this.assign(
+          'title',
+          `${match[1]}${this.getI18n()('title-doc-suffix', version)}`
+        );
       }
     }
 
@@ -126,39 +138,51 @@ module.exports = class extends Base {
     const lang = this.ctx.lang.toLowerCase();
     const version = this.get('version');
 
-    const cmd = `grep '${keyword}' -ri *.md`;
+    const cmd = `${
+      process.platform === 'win32' ? await this.grep() : 'grep'
+    } '${keyword}' -ri *.md`;
     const fn = think.promisify(childProcess.exec, childProcess);
     const options = {
-      cwd: think.ROOT_PATH + `/view/${lang}/doc/${version}/`
+      cwd: process.cwd() + `/view/${lang}/doc/${version}/`
     };
     let data = {};
     // ignore command error
-    const result = await fn(cmd, options).catch(() => '');
-    result.split('\n').filter(item => {
-      return item;
-    }).map(item => {
-      const pos = item.indexOf(':');
-      const filename = item.substr(0, pos);
-      if (!(filename in data)) {
-        data[filename] = { filename: filename, text: [] };
-      }
-      let text = item.substr(pos + 1);
-      text = this.escapeHtml(text).replace(new RegExp(keyword, 'ig'), a => {
-        return `<span style="color:#c7254e">${a}</span>`;
-      });
-      data[filename].text.push(text);
+    const result = await fn(cmd, options).catch(err => {
+      think.logger.error(err);
+      return '';
     });
-    data = Object.keys(data).map(item => {
-      const itemData = data[item];
-      const filePath = `${think.ROOT_PATH}/view/${lang}/doc/${version}/${itemData.filename}`;
-      const content = fs.readFileSync(filePath, 'utf8').trim();
-      content.replace(/#+([^\n]+)/, (a, c) => {
-        itemData.title = c;
+    result
+      .split('\n')
+      .filter(item => {
+        return item;
+      })
+      .map(item => {
+        const pos = item.indexOf(':');
+        const filename = item.substr(0, pos);
+        if (!(filename in data)) {
+          data[filename] = { filename: filename, text: [] };
+        }
+        let text = item.substr(pos + 1);
+        text = this.escapeHtml(text).replace(new RegExp(keyword, 'ig'), a => {
+          return `<span style="color:#c7254e">${a}</span>`;
+        });
+        data[filename].text.push(text);
       });
-      return itemData;
-    }).sort((a, b) => {
-      return a.text.length < b.text.length ? 1 : -1;
-    });
+    data = Object.keys(data)
+      .map(item => {
+        const itemData = data[item];
+        const filePath = `${process.cwd()}/view/${lang}/doc/${version}/${
+          itemData.filename
+        }`;
+        const content = fs.readFileSync(filePath, 'utf8').trim();
+        content.replace(/#+([^\n]+)/, (a, c) => {
+          itemData.title = c;
+        });
+        return itemData;
+      })
+      .sort((a, b) => {
+        return a.text.length < b.text.length ? 1 : -1;
+      });
     return data;
   }
   /**
@@ -173,7 +197,7 @@ module.exports = class extends Base {
       '"': '&quot;',
       "'": '&#39;'
     };
-    return (str + '').replace(/[<>'"]/g, function (a) {
+    return (str + '').replace(/[<>'"]/g, function(a) {
       return htmlMaps[a];
     });
   }
@@ -185,7 +209,7 @@ module.exports = class extends Base {
     this.assign('currentNav', 'doc');
     this.assign('hasBootstrap', true);
     this.assign('hasVersion', true);
-    this.getSideBar();
+    await this.getSideBar();
 
     const keyword = this.cmdFilter(this.get('keyword'));
     this.assign('keyword', keyword);
@@ -203,4 +227,45 @@ module.exports = class extends Base {
     keyword = keyword.replace(/[^\u4e00-\u9fa5A-Za-z0-9_ *-]/g, '');
     return keyword.replace("'", "\\'");
   }
-}
+
+  async grep() {
+    if (process.platform === 'win32') {
+      const { join } = require('path');
+
+      const fn = think.promisify(childProcess.exec, childProcess);
+      const result = await fn('where git').catch(() => '');
+      if (result) {
+        const gitPath = result.split('\n');
+        const grep = join(
+          gitPath[0],
+          '..',
+          '..',
+          '..',
+          'usr',
+          'bin',
+          'grep.exe'
+        );
+        if (fs.existsSync(grep)) {
+          return grep;
+        } else {
+          const grep2 = join(gitPath[0], '..', '..', 'usr', 'bin', 'grep.exe');
+          if (fs.existsSync(grep2)) {
+            return grep2;
+          } else {
+            const grep3 = join(gitPath[0], '..', 'usr', 'bin', 'grep.exe');
+            if (fs.existsSync(grep3)) {
+              return grep3;
+            } else {
+              return 'grep';
+            }
+          }
+        }
+      } else {
+        console.warn(
+          '请先下载git: https://registry.npmmirror.com/-/binary/git-for-windows/v2.41.0.windows.1/Git-2.41.0-64-bit.exe'
+        );
+        return 'grep';
+      }
+    }
+  }
+};
